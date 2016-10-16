@@ -1,7 +1,7 @@
 # @cio/transformer
 [![Build Status](https://travis-ci.org/elidoran/node-cio-transformer.svg?branch=master)](https://travis-ci.org/elidoran/node-cio-transformer)
 [![Dependency Status](https://gemnasium.com/elidoran/node-cio-transformer.png)](https://gemnasium.com/elidoran/node-cio-transformer)
-[![npm version](https://badge.fury.io/js/cio.svg)](http://badge.fury.io/js/cio)
+[![npm version](https://badge.fury.io/js/%40cio%2Ftransformer.svg)](http://badge.fury.io/js/%40cio%2Ftransformer)
 
 Easily use a Transform pipeline to handle communication.
 
