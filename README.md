@@ -17,117 +17,56 @@ Uses specified transforms in a pipeline from socket input back to socket output.
 
 Accepts a single transform or an array of transforms.
 
-Accepts the actual transform instance, a function to build the transform, or a string it can provide to `require()` to get an instance or builder function.
+Accepts the actual transform instance, a function to build the transform, or a string it can provide to `require()` to get a builder function.
 
 Note: A server should (very likely) use builder functions to make a new transform for each connection.
 
 ```javascript
-// get the module's builder function
-var buildCio = require('cio');
+// get the `cio` module's builder function and build one
+var buildCio = require('cio')
+  , cio = buildCio();
 
-// pass this module's name to the core module: `cio` as a plugin
-var cio = buildCio({
-  // can specify many plugins in this array
-  plugins: [ '@cio/transformer' ]
-});
+// provide the module name to load it for the specific type of socket
+cio.onClient('@cio/transformer');
+cio.onServerClient('@cio/transformer');
 
-//  OR: provide options for a plugin too:
-var cio = buildCio({
-  plugins: [
-    { plugin: '@cio/transformer', options: {some: 'options'} }
-  ]
-});
-
-// could alternatively do any of the following:
-
-// pass the plugin info to the `cio.use()` function
-cio.use('@cio/transformer');
-
-//  OR: and with some plugin options
-cio.use('@cio/transformer', { some: 'options' });
-
-//  OR: provide the function to use()
+// OR: provide the function
 var fn = require('@cio/transformer');
-cio.use(fn);
-
-//  OR: provide the function with options
-cio.use(fn, { some: 'options' });
+cio.onClient(fn);
+cio.onServerClient(fn);
 
 
-// now make a client
+// shows 3 different ways to provide a transform to use.
+// shows specifying a single transform and an array of them
+var transformModule = 'some-module'
+  , buildTransform = require(transformModule)
+  , someTransform = buildTransform()
+  , optionsAsInstance = { transform: someTransform }
+  , optionsAsBuilder = { transform: buildTransform }
+  , optionsAsString = { transform: transformModule }
+  , optionsWithMultiple = {
+      // can mix any of the types
+      transform: [
+        transformModule, // does a require(), then calls function
+        buildTransform,  // calls buildTransform()
+        someTransform    // uses instance (not good for server)
+      ]
+  };
 
-// get an instance of our transform (or a function which builds the transform)
-var someTransform = getSomeTransform();
+// then create a client. these all produce the same thing:
+var client = cio.client(optionsAsInstance)
+  , client = cio.client(optionsAsBuilder)
+  , client = cio.client(optionsAsString);
+// does:
+//   client.pipe(someTransform).pipe(client)
 
-// specify the transform in the options (or specify an array of them)
-var options = { transform: someTransform };
-// OR: use an array for multiple transforms
-var options = { transform: [ someTransform ] };
-
-// then create a client
-client = cio.client(options);
-
-// the result is a client socket created by `net.connect()`
-// when it connects it will do:
-// client.pipe(theTransform).pipe(client)
-
-// Note: specify multiple transforms and they will be piped in the order given.
-
-// Note: see module `cio` for more on its options
-
-// Do the same with cio.server(...) for server side connection setup
+// the string and function type will be used to get a new transform
+// and then all three are piped in sequence.
+var client = cio.client(optionsWithMultiple);
+// final result is:
+//   client.pipe(someTransform).pipe(someTransform2).pipe(someTransform3).pipe(client)
 ```
 
-## Usage: Specify string, function, or transform
-
-Each transform specified may be an instance of a transform or a function which returns a transform.
-
-Also, they may be a string which can be passed to `require()` to get a function or a transform.
-
-Note, they may be mixed.
-
-```javascript
-// assume we've already created the `cio` instance as above.
-
-// some different ways to specify it
-var transformFromRequire = 'some-module'        // string
-  , transformFromFunction = someBuilderFunction // function
-  , transformInstance = getSomeTransform();     // transform
-
-// create options with the transforms
-var options = {
-  transform: [
-    // note, they will be piped in the order specified here
-    transformFromRequire
-    , transformFromFunction
-    , transformInstance
-  ]
-};
-
-// create the connection
-var client = cio.client(options);
-//  OR, for a server:
-var server = cio.server(options);
-
-// the `transformFromRequire` string will be passed to a require() call
-// expecting to receive a builder function which will accept the `options`
-// passed to client()/server() and return a transform instance.
-
-// the `transformFromFunction` should be a function which accepts the `options`
-// provided to client()/server() and builds a transform.
-
-// the `transformInstance` is used as is.
-
-// when the client connects, or when a new server connection is made, it will
-// pipe the connection into the first transform, then each transform in order,
-// then back to the connection.
-// for a client() connection this is done once.
-// for a server() it will be done for *each* new connection. This means using
-// a builder function is important so it builds a new transform instance for
-// each new connection.
-// Note: a transform specified by a string will be require()'d only once. its
-// result will be reused.
-```
 
 ## Build Transform
 
@@ -135,7 +74,7 @@ There are multiple ways to build a Transform.
 
 1. Use the standard methods described in Node's `stream` [documentation](https://nodejs.org/docs/latest/api/stream.html#stream_api_for_stream_implementers) (Note, this link is for the latest Node, be sure to check for the version you're using).
 2. Use a helper module such as [through](https://www.npmjs.com/package/through) or [through2](https://www.npmjs.com/package/through2)
-3. Use a builder module [transforming](https://www.npmjs.com/package/transforming) (disclaimer: I made this module...)
+3. Use a builder module [transforming](https://www.npmjs.com/package/transforming) (Note, I made this module...)
 
 ```javascript
 // standard Node way (newer versions):
