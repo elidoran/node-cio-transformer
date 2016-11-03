@@ -47,9 +47,9 @@ var transformModule = 'some-module'
   , optionsWithMultiple = {
       // can mix any of the types
       transform: [
-        transformModule, // does a require(), then calls function
-        buildTransform,  // calls buildTransform()
         someTransform    // uses instance (not good for server)
+        buildTransform,  // calls buildTransform()
+        transformModule, // does a require(), then calls function
       ]
   };
 
