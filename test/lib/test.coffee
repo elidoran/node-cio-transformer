@@ -1,6 +1,6 @@
 assert = require 'assert'
 buildCio = require 'cio'
-buildListener = require '../../lib'
+listener = require '../../lib'
 
 transforming = require('transforming')()
 
@@ -9,7 +9,7 @@ cio = buildCio()
 
 
 # 1. a transform instance
-instance = transforming.string().toString (string) -> string + ' (intance) '
+instance = transforming.string().toString (string) -> string + ' (instance) '
 instance.id = 'instance'
 
 # 2. a builder function
@@ -43,16 +43,6 @@ describe 'test transformer', ->
 
   describe 'with socket and array of transforms', ->
 
-    builderOptions =
-      transform: [
-        instance
-        builder
-        requirable
-      ]
-
-    # build the listener
-    listener = buildListener builderOptions
-
     # pass a fake socket to the listener
     fakeSocket =
       onEvents: {}
@@ -71,18 +61,23 @@ describe 'test transformer', ->
       emit: (event, args...) ->
         @emits[event] = args
 
-    # call the listener as if a new socket connection has been made
-    listener fakeSocket
+    options =
+      client: fakeSocket
+      transform: [
+        instance
+        builder
+        requirable
+      ]
 
-    it 'should return a listener function', ->
-      assert.equal (typeof listener), 'function'
+    # call the listener as if a new socket connection has been made
+    listener.call options
 
     it 'should call listener to create the transforms array', ->
       assert.equal fakeSocket.transforms.length, 3, 'should have 3 transforms'
 
     it 'should add an error listener', -> assert fakeSocket.onEvents.error
 
-    it 'should pipe to the first tranfsorm', ->
+    it 'should pipe to the first transform', ->
       assert.equal instance.pipedFrom, fakeSocket
 
     it 'should pipe last to socket', ->

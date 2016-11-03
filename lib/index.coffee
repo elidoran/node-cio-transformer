@@ -1,60 +1,61 @@
+# this uses the options provided (this) to create one or more Transform stream
+# and pipe the socket into them and back to itself.
+# accepts strings to require modules.
+# accepts builder functions to create new transform instances
+#
+# when multiple sockets are created with the same options the module string
+# will be reused and it'll just grab the cached require result.
+#
+# the builder functions will be called again to build new transform instances.
+module.exports = (control) ->
 
-# this is the builder function to make the listener function
-module.exports = (builderOptions) ->
+  # get our option `transform`, which may be an array.
+  transforms =
+    if Array.isArray @transform then @transform
+    else transforms = [ @transform ]
 
-  # alias for now:
-  opts = builderOptions
+  # we want the socket. doesn't matter whether its for a client or server client
+  socket = @client ? @connection
 
-  # return error if a transform isn't provided
-  unless opts?.transform?
-    return error:'Must specify at least one transform'
-
-  # if there are strings then try require'ing them now to ensure they're available
-
-  # do we have one transform or an array of transforms?
-  if Array.isArray opts?.transform then transforms = opts.transform
-  else transforms = [opts.transform]
-
-  # check if transforms must be require()'d
+  # check each transform.
+  #   1. require() string to get a builder function
+  #   2. call a function to get a transform instance
+  #   3. add error event forwarder from transform to socket
   for each,index in transforms
-    if typeof each is 'string' # then require it
-      try # store the required result back into the transforms array
-        transforms[index] = require each
-      catch error # return an object with an error message and the Error
-        return error:'Unable to require transform from:'+each, Error:error
 
-  # return the listener function
-  return listener = (socket) ->
+    if typeof each is 'string'
 
-    # let's hold our created transform instances in this array
-    array = []
+      try # expect require() to return a function
+        each = require each
+      catch error
+        control.fail 'Unable to require transform from: ' + each, error
+        return
 
-    # check if transforms must be built.
-    for each,index in transforms
-      if typeof each is 'function' then each = each builderOptions
-      array.push each
-      # also, take this opportunity to forward errors to the connection
+    # call builder function and store result
+    if typeof each is 'function' then each = transforms[index] = each()
+
+    # forward errors to the socket  # TODO: necessary?
+    unless each.__hasTransformerErroForwarder is true
       each.on 'error', (error...) -> socket.emit 'error', error...
+      each.__hasTransformerErroForwarder = true
 
-    # let's remember the last one
-    last = array[array.length - 1]
+  # let's remember the last one
+  last = transforms[transforms.length - 1]
 
-    # # now pipe() them all
+  # # now pipe() them all
 
-    # first, pipe the connection into the first transform
-    socket.pipe array[0]
+  # first, pipe the socket into the first transform
+  socket.pipe transforms[0]
 
-    # then, pipe each transform to the next one (except the last one)
-    if array.length > 1
-      for each,index in array when each isnt last
-        each.pipe array[index + 1]
+  # then, pipe each transform to the next one (except the last one)
+  if transforms.length > 1
+    for each,index in transforms when each isnt last
+      each.pipe transforms[index + 1]
 
-    # finally, pipe `last` back to the connection
-    last.pipe socket
+  # finally, pipe `last` back to the connection
+  last.pipe socket
 
-    # store the transform instances on the socket
-    socket.transforms = array
+  # store the transform instances on the socket
+  socket.transforms = transforms
 
-    # handle common error response
-    socket.on 'error', (error) ->
-      console.error 'Connection error:',error.message
+  return
