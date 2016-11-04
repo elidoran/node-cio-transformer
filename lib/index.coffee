@@ -9,10 +9,18 @@
 # the builder functions will be called again to build new transform instances.
 module.exports = (control) ->
 
-  # get our option `transform`, which may be an array.
-  transforms =
-    if Array.isArray @transform then @transform
-    else transforms = [ @transform ]
+  # only do our work if the context contains our `transformer` options
+  unless @transformer? then return
+
+  # always use it as our options object
+  options = @transformer
+
+  # if it has a `transform` sub-property use that, otherwise, use options.
+  # when they provide other options they need to use the sub-property.
+  transform = options.transform ? options
+
+  # it may be an array, so, let's make it an array when it's not
+  transforms = if Array.isArray transform then transform else [ transform ]
 
   # we want the socket. doesn't matter whether its for a client or server client
   socket = @client ? @connection
@@ -32,10 +40,10 @@ module.exports = (control) ->
         return
 
     # call builder function and store result
-    if typeof each is 'function' then each = transforms[index] = each()
+    if typeof each is 'function' then each = transforms[index] = each options
 
-    # forward errors to the socket  # TODO: necessary?
-    unless each.__hasTransformerErroForwarder is true
+    # forward errors to the socket
+    unless each.__hasTransformerErroForwarder is true or options.noErrorForward is true
       each.on 'error', (error...) -> socket.emit 'error', error...
       each.__hasTransformerErroForwarder = true
 
@@ -59,3 +67,5 @@ module.exports = (control) ->
   socket.transforms = transforms
 
   return
+
+module.exports.options = id:'@cio/transformer'
