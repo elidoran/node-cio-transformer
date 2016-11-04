@@ -63,7 +63,7 @@ describe 'test transformer', ->
 
     options =
       client: fakeSocket
-      transform: [
+      transformer: [
         instance
         builder
         requirable
@@ -73,7 +73,7 @@ describe 'test transformer', ->
     listener.call options
 
     it 'should call listener to create the transforms array', ->
-      assert.equal fakeSocket.transforms.length, 3, 'should have 3 transforms'
+      assert.equal fakeSocket.transforms?.length, 3, 'should have 3 transforms'
 
     it 'should add an error listener', -> assert fakeSocket.onEvents.error
 
