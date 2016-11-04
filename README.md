@@ -21,6 +21,14 @@ Accepts the actual transform instance, a function to build the transform, or a s
 
 Note: A server should (very likely) use builder functions to make a new transform for each connection.
 
+What to do:
+
+1. add the listener to the `cio` instance
+2. provide the `transformer` option property to `cio.client()` or `cio.server()`
+3. specify one of the allowed types as its value, or, an array of values
+4. for options to builder functions put the above info in the `transform` sub-property and builder options as sibling keys to it.
+
+
 ```javascript
 // get the `cio` module's builder function and build one
 var buildCio = require('cio')
@@ -41,12 +49,12 @@ cio.onServerClient(fn);
 var transformModule = 'some-module'
   , buildTransform = require(transformModule)
   , someTransform = buildTransform()
-  , optionsAsInstance = { transform: someTransform }
-  , optionsAsBuilder = { transform: buildTransform }
-  , optionsAsString = { transform: transformModule }
+  , optionsAsInstance = { transformer: someTransform }
+  , optionsAsBuilder = { transformer: buildTransform }
+  , optionsAsString = { transformer: transformModule }
   , optionsWithMultiple = {
       // can mix any of the types
-      transform: [
+      transformer: [
         someTransform    // uses instance (not good for server)
         buildTransform,  // calls buildTransform()
         transformModule, // does a require(), then calls function
@@ -65,6 +73,28 @@ var client = cio.client(optionsAsInstance)
 var client = cio.client(optionsWithMultiple);
 // final result is:
 //   client.pipe(someTransform).pipe(someTransform2).pipe(someTransform3).pipe(client)
+```
+
+
+## Usage: Provide Options for Builder Functions
+
+It's possible to put options in the call to `cio.client()` or `cio.server()` which will be provided to the builder functions creating the transforms for you.
+
+To do so, move the usual options into a sub-property `transform` and the top `transformer` object will be provided to the builder functions.
+
+```javascript
+var usualOptions = { transformer: someBuilderFunction }
+  , newOptions   = {
+    transformer: {
+      transform: someBuilderFunction,
+      some: 'other option values'
+    }
+  };
+
+// for the `usualOptions` the `someBuilderFunction` will receive itself as the options.
+
+// for the `newOptions` it will receive the `transformer` key's value which has
+// the `some` key, as well as the `transform` key.
 ```
 
 
