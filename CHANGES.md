@@ -1,3 +1,7 @@
+**0.3.1 - 2016/11/05**
+
+1. change `connection` to `serverClient` for cio 0.4.0
+
 **0.3.0 - 2016/11/04**
 
 1. change `transform` property to `transformer` to match the module's name

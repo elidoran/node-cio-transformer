@@ -23,7 +23,7 @@ module.exports = (control) ->
   transforms = if Array.isArray transform then transform else [ transform ]
 
   # we want the socket. doesn't matter whether its for a client or server client
-  socket = @client ? @connection
+  socket = @client ? @serverClient
 
   # check each transform.
   #   1. require() string to get a builder function
